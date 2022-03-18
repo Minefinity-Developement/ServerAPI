@@ -1,0 +1,9 @@
+name: MinefinityAPI
+authors:
+  - LetsVrime (Jerome)
+  - ImTxbii (Tobi)
+
+
+main: de.minefinity.bungee.BungeeAPI
+version: 1.0
+api-version: 1.0
