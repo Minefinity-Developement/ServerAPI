@@ -1,5 +1,8 @@
 package de.minefinity.global.objects;
 
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoDatabase;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,6 +12,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,11 +30,15 @@ public class MFDatabase {
     public Logger logger;
 
     @Getter @Setter
-    public Connection connection;
+    public MongoClient mongoClient;
 
+    @Getter @Setter
+    public MongoDatabase mongoDatabase;
 
     public ArrayList<MFTable> tables = new ArrayList<>();
 
+    @Getter
+    private final ExecutorService executorService;
 
     public MFDatabase(String HOST, String USER, String PASSWORD, String DATABASE, int PORT, Logger logger) {
         this.HOST = HOST;
@@ -39,26 +48,28 @@ public class MFDatabase {
         this.PORT = PORT;
 
         this.logger = logger;
+
+        this.executorService = Executors.newFixedThreadPool(8);
     }
 
 
     public void connect() {
         try {
-            this.connection = DriverManager.getConnection(MessageFormat.format("jdbc:mysql://{0}:{1}/{2}", new Object[]{
+            this.mongoClient = new MongoClient(new MongoClientURI(MessageFormat.format("mongoDb://{0}:{1}@{2}:{3}", new Object[]{
+                    this.USER,
+                    this.PASSWORD,
+
                     this.HOST,
-                    this.PORT,
-                    this.DATABASE
-            }), this.USER, this.PASSWORD);
+
+                    this.PORT
+            })));
+
+            this.mongoDatabase = this.getMongoClient().getDatabase(this.DATABASE);
 
             this.logger.log(Level.INFO, "Verbindung zur Datenbank wurde hergestellt.");
 
 
-            for (MFTable table : this.tables) {
-                table.setDatabase(this);
-            }
-
-
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
 
             this.logger.log(Level.WARNING, "Verbindung zur Datenbank konnte nicht hergestellt werden.");
@@ -69,25 +80,15 @@ public class MFDatabase {
 
     public void disconnect() {
         try {
-            this.connection.close();
+            this.mongoClient.close();
 
             this.logger.log(Level.INFO, "Verbindung zur Datenbank wurde getrennt.");
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
 
             this.logger.log(Level.WARNING, "Verbindung zur Datenbank konnte nicht getrennt werden.");
         }
     }
 
-
-    public Statement createStatement() {
-        try {
-            return this.connection.createStatement();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
 
 }
